@@ -1,17 +1,17 @@
 import numpy as np
 
-AU      = 1.496e11    # 1 Astronomische Einheit in Metern
-M_sun   = 1.989e30    # Sonnenmasse in kg
-v_earth = 29_780      # Erdbahngeschwindigkeit in m/s
+AU      = 1.496e11    # 1 astronomical unit in meters
+M_SUN   = 1.989e30    # solar mass in kg
+V_EARTH = 29_780      # Earth orbital velocity in m/s
 
-pos_erde = np.array([AU, 0.0])
-vel_erde = np.array([0.0, v_earth])
+pos_earth = np.array([AU, 0.0])
+vel_earth = np.array([0.0, V_EARTH])
 
-print("Position Erde:", pos_erde)
-print("Abstand zur Sonne:", np.linalg.norm(pos_erde), "m")
-print("Geschwindigkeit:", np.linalg.norm(vel_erde), "m/s")
+print("Earth position:", pos_earth)
+print("Distance to Sun:", np.linalg.norm(pos_earth), "m")
+print("Orbital velocity:", np.linalg.norm(vel_earth), "m/s")
 
-# Erwartete Ausgabe:
-# Position Erde: [1.496e+11 0.000e+00]
-# Abstand zur Sonne: 149600000000.0 m
-# Geschwindigkeit: 29780.0 m/s
+# Expected output:
+# Earth position: [1.496e+11 0.000e+00]
+# Distance to Sun: 149600000000.0 m
+# Orbital velocity: 29780.0 m/s

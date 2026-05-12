@@ -1,37 +1,19 @@
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
-import datetime
 
 G     = 6.674e-11
-M_sun = 1.989e30
+M_SUN = 1.989e30
 AU    = 1.496e11
 
 bodies = [
-    {
-        "name":  "Sonne",
-        "mass":  M_sun,
-        "pos":   np.array([0.0, 0.0]),
-        "vel":   np.array([0.0, 0.0]),
-        "color": "yellow",
-    },
-    {
-        "name":  "Erde",
-        "mass":  5.972e24,
-        "pos":   np.array([AU, 0.0]),
-        "vel":   np.array([0.0, 29_780.0]),
-        "color": "deepskyblue",
-    },
-    {
-        "name":  "Jupiter",
-        "mass":  1.898e27,                          # 318× Erdmasse
-        "pos":   np.array([5.2 * AU, 0.0]),         # 5.2 AU von der Sonne
-        "vel":   np.array([0.0, 13_070.0]),         # Jupiters Bahngeschwindigkeit
-        "color": "orange",
-    },
+    {"name": "Sun",     "mass": M_SUN,    "pos": np.array([0.0, 0.0]),      "vel": np.array([0.0, 0.0]),      "color": "yellow"},
+    {"name": "Earth",   "mass": 5.972e24, "pos": np.array([AU,  0.0]),      "vel": np.array([0.0, 29_780.0]), "color": "deepskyblue"},
+    {"name": "Jupiter", "mass": 1.898e27, "pos": np.array([5.2*AU, 0.0]),   "vel": np.array([0.0, 13_070.0]), "color": "orange"},
 ]
 
-dt    = 3600 * 24    # 1 Tag
-steps = 365 * 5      # 5 Jahre
+dt    = 86400       # 1 day
+steps = 365 * 5     # 5 years
 
 trajectories = [[] for _ in bodies]
 
@@ -55,22 +37,21 @@ for step in range(steps):
 
 trajectories = [np.array(t) for t in trajectories]
 
-# ── Plot ───────────────────────────────────────
+# ── Plot ──────────────────────────────────────────────────────────────────────
 start_date = datetime.date(2024, 1, 1)
 end_date   = start_date + datetime.timedelta(seconds=steps * dt)
 
 fig, ax = plt.subplots(figsize=(9, 9), facecolor="black")
 ax.set_facecolor("black")
 ax.set_aspect("equal")
-fig.suptitle("3-Körper · Sonne + Erde + Jupiter",
+fig.suptitle("3-Body · Sun + Earth + Jupiter",
              color="white", fontsize=14, fontweight="bold", y=0.97)
-ax.set_title(f"dt = {dt}s  |  {steps} Schritte  |  {start_date} → {end_date}",
+ax.set_title(f"dt = {dt}s  |  {steps} steps  |  {start_date} → {end_date}",
              color="#aaaaaa", fontsize=9, pad=10)
 
 for body, traj in zip(bodies, trajectories):
-    ax.plot(traj[:, 0], traj[:, 1],
-            color=body["color"], lw=0.8, alpha=0.8, label=body["name"])
-    ax.scatter(traj[0, 0],  traj[0, 1],  color=body["color"], s=80, zorder=5)
+    ax.plot(traj[:, 0], traj[:, 1], color=body["color"], lw=0.8, alpha=0.8, label=body["name"])
+    ax.scatter(traj[0,  0], traj[0,  1], color=body["color"], s=80, zorder=5)
     ax.scatter(traj[-1, 0], traj[-1, 1], color=body["color"], s=40, zorder=5, marker="x")
 
 ax.legend(facecolor="black", labelcolor="white")
@@ -79,6 +60,6 @@ for spine in ax.spines.values():
     spine.set_edgecolor("gray")
 
 plt.tight_layout()
-plt.savefig("orbit_3body.png", dpi=150, bbox_inches="tight")
+plt.savefig("plots/orbit_3body.png", dpi=150, bbox_inches="tight")
 plt.show()
-print("Gespeichert: orbit_3body.png")
+print("Saved: plots/orbit_3body.png")

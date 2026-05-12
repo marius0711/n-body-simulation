@@ -1,139 +1,153 @@
-# N-Körper Simulation — Gravitationsdynamik & Numerische Integration
+# N-Body Gravitational Simulation
 
-> Lernprojekt: Numerische Physik in Python — von der Newtonschen Gravitation bis zur animierten N-Körper-Simulation mit RK4.
+> Numerical physics in Python — from Newtonian gravity to animated N-body systems, with a rigorous comparison of Euler, RK4, and Leapfrog integrators.
 
-Dieses Projekt simuliert die Gravitationswechselwirkung zwischen N Massen im zweidimensionalen Raum. Ausgangspunkt ist das klassische 2-Körper-Problem (Erde + Sonne), das schrittweise zu einem chaotischen N-Körper-System ausgebaut wird. Der Fokus liegt auf dem Verständnis numerischer Integrationsmethoden — insbesondere dem Sprung von Euler zu Runge-Kutta 4 — und der Frage, wie physikalische Erhaltungsgrößen als Qualitätsmaßstab für Algorithmen dienen können.
+This project simulates gravitational interactions between N masses in 2D space. Starting from the classic 2-body problem (Earth + Sun), it scales to chaotic N-body systems and benchmarks three numerical integration strategies on a question that matters in real astrophysics: *which integrator keeps energy conserved over long timescales?*
 
-**Stack:** Python 3 · NumPy · Matplotlib — 100 % Open Source, keine weiteren Dependencies.
-
----
-
-## Ergebnisse
-
-| Integrator | Drift (3 Jahre, dt=1 Tag) | Relativer Energiefehler |
-|---|---|---|
-| Euler | `2.18e+11 m` | `30 %` |
-| RK4 | `1.91e+09 m` | `0.0000002 %` |
-
-RK4 ist **114× genauer in der Bahn** und **140 Millionen× genauer in der Energie** — bei gleichem `dt`.
+**Stack:** Python 3 · NumPy · Matplotlib — no additional dependencies.
 
 ---
 
-## Projektstruktur
+## Results
+
+### Integrator accuracy (Earth orbit, dt = 1 day, 3 years)
+
+| Integrator | Order | Orbital drift | Max energy error |
+|---|---|---|---|
+| Euler     | O(dt)   | `2.18 × 10¹¹ m` | `30 %` |
+| Leapfrog  | O(dt²)  | `1.08 × 10⁹ m`  | `< 0.01 %` |
+| RK4       | O(dt⁴)  | `1.91 × 10⁹ m`  | `0.0000002 %` |
+
+**Why Leapfrog matters:** RK4 wins on per-step precision, but it is *not symplectic* — over centuries, its energy error accumulates. Leapfrog conserves a shadow Hamiltonian exactly, so energy error stays bounded regardless of simulation length. This is why symplectic integrators dominate production astrophysics codes.
+
+![Integrator comparison](plots/orbit_compare.png)
+
+---
+
+## Project structure
 
 ```
 n-body-simulation/
 ├── README.md
-├── .gitignore
+├── requirements.txt
 ├── src/
-│   ├── orbit.py              → Euler-Integration, 2-Körper, dt-Experiment
-│   ├── orbit_3body.py        → Sonne + Erde + Jupiter, 5 Jahre
-│   ├── orbit_chaos.py        → Chaos-Experiment: Sensitivität auf Anfangsbedingungen
-│   ├── orbit_rk4.py          → RK4 vs Euler: Bahn + Energiefehler-Vergleich
-│   ├── orbit_animate.py      → Sonnensystem-Animation (FuncAnimation)
-│   └── orbit_animate_n.py    → N zufällige Körper animiert mit Schweif & RK4
-├── steps/                    → Lernschritte (Woche 1, einzelne Konzepte)
+│   ├── nbody.py             → shared physics: forces, energy, Euler / Leapfrog / RK4
+│   ├── orbit.py             → Euler 2-body demo, orbital drift visualization
+│   ├── orbit_rk4.py         → Euler vs. RK4 comparison, energy error plot
+│   ├── orbit_compare.py     → Euler vs. Leapfrog vs. RK4 — long-run stability
+│   ├── orbit_3body.py       → Sun + Earth + Jupiter, 5-year simulation
+│   ├── orbit_chaos.py       → chaos: 1,000 km initial offset → AU-scale divergence
+│   ├── orbit_animate.py     → real-time solar system animation (RK4)
+│   └── orbit_animate_n.py   → N random bodies animated with trails
+├── tests/
+│   └── test_physics.py      → pytest suite: force laws, energy conservation, accuracy
+├── steps/                   → learning scaffolding — one concept per file
 │   ├── v_earth.py
 │   ├── calculate_force.py
 │   ├── euler_step.py
 │   └── run_simulation.py
-└── plots/                    → Gespeicherte Plot-Outputs
-    ├── orbit_euler.png
-    ├── orbit_3body.png
-    ├── orbit_chaos.png
-    └── orbit_rk4_compare.png
+└── plots/                   → saved outputs
 ```
 
 ---
 
-## Physikalische Grundlagen
+## Physics
 
-### Newtonsche Gravitation
+### Newtonian gravity
 
 ```
-F_vec = G * m1 * m2 / |r|³  *  r_vec
+F = G · m₁ · m₂ / |r|²   (magnitude)
+a = G · m_j / |r_ij|³ · r_ij   (acceleration vector on body i from body j)
 ```
 
-`G = 6.674 × 10⁻¹¹ m³ kg⁻¹ s⁻²` — universelle Gravitationskonstante
+`G = 6.674 × 10⁻¹¹ m³ kg⁻¹ s⁻²`
 
-### Bewegungsgleichungen (Zustandsraum)
+### State-space formulation
 
 ```
 dx/dt = v
-dv/dt = a = Σ_{j≠i}  G * m_j / |r_ij|³  *  r_ij
+dv/dt = a = Σ_{j≠i}  G · m_j / |r_ij|³ · r_ij
 ```
 
-### Energieerhaltung (Qualitätsmetrik)
+This is the same state-space representation used in control theory — `[x, v]` is the system state, gravity is the input forcing term.
+
+### Energy as a quality metric
 
 ```
-E_kin = 0.5 * m * |v|²
-E_pot = -G * m_i * m_j / |r_ij|     (pro Paar)
-E_ges = E_kin + E_pot = const.
+E_kin = ½ m |v|²
+E_pot = -G m_i m_j / |r_ij|   (per pair)
+E_total = E_kin + E_pot = const.
 ```
+
+A good integrator keeps `|ΔE / E₀|` small. Euler does not.
 
 ---
 
-## Numerische Methoden
+## Numerical integrators
 
-### Euler (Fehlerordnung O(dt))
-
-```
-x(t+dt) = x(t) + v(t) * dt
-v(t+dt) = v(t) + a(t) * dt
-```
-
-Einfach, aber akkumuliert Energie — Bahnen spiralisieren bei großem `dt`.
-
-### Runge-Kutta 4 (Fehlerordnung O(dt⁴))
+### Euler — O(dt), not symplectic
 
 ```
-k1 = f(t,       y)
-k2 = f(t+dt/2,  y + k1*dt/2)
-k3 = f(t+dt/2,  y + k2*dt/2)
-k4 = f(t+dt,    y + k3*dt)
-
-y(t+dt) = y(t) + (k1 + 2*k2 + 2*k3 + k4) * dt/6
+x(t+dt) = x(t) + v(t) · dt
+v(t+dt) = v(t) + a(t) · dt
 ```
 
-4× teurer pro Schritt — aber dramatisch stabiler. Ermöglicht `dt = 1 Tag` mit Präzision wie Euler mit `dt = 1 Stunde`.
+Simple and cheap, but energy grows monotonically — orbits spiral outward.
 
----
+### Leapfrog (Velocity Verlet / KDK) — O(dt²), **symplectic**
 
-## Lernphasen
+```
+v(t + dt/2) = v(t) + a(t) · dt/2             # half-kick
+x(t + dt)   = x(t) + v(t + dt/2) · dt        # drift
+v(t + dt)   = v(t + dt/2) + a(t+dt) · dt/2   # half-kick
+```
 
-| Woche | Thema | Kernerkenntnis |
-|---|---|---|
-| 1 | Euler + 2-Körper | Erste Ellipse, Euler-Drift durch dt-Experiment sichtbar |
-| 2 | 3-Körper + Chaos | 1.000 km Startunterschied → ~1 AU Abweichung nach 10 Jahren |
-| 3 | RK4 + Energiemessung | 140 Mio.× bessere Energieerhaltung bei gleichem dt |
-| 4 | Animation + N-Körper | Echtzeit-Simulation mit FuncAnimation, Schweife, Masse-Größe |
+Two force evaluations per step. Symplectic structure means energy error is *bounded* — it oscillates but never drifts, regardless of how long you run the simulation.
+
+### RK4 — O(dt⁴), not symplectic
+
+```
+k1 = f(t,      y)
+k2 = f(t+dt/2, y + k1·dt/2)
+k3 = f(t+dt/2, y + k2·dt/2)
+k4 = f(t+dt,   y + k3·dt)
+
+y(t+dt) = y(t) + (k1 + 2k2 + 2k3 + k4) · dt/6
+```
+
+Four force evaluations per step. Most accurate per step, but non-symplectic energy error eventually accumulates in very long runs.
 
 ---
 
 ## Setup
 
 ```bash
-pip install numpy matplotlib
-python src/orbit_animate_n.py    # N-Körper-Animation starten
-python src/orbit_rk4.py          # Euler vs. RK4 Vergleich
+pip install numpy matplotlib pytest
+python3 -m pytest tests/ -v          # 8 tests: force laws + energy conservation
+python3 src/orbit_compare.py         # Euler vs. Leapfrog vs. RK4 (main result)
+python3 src/orbit_animate_n.py       # N-body live animation
+python3 src/orbit_chaos.py           # chaos sensitivity experiment
 ```
 
 ---
 
-## Weiterführende Themen
+## Learning phases
 
-- **Leapfrog / Störmer-Verlet** — symplektischer Integrator, Standard in Astrophysik
-- **Barnes-Hut** — O(N log N) statt O(N²), skaliert auf 1000+ Körper
-- **3D** — `pos/vel` als `np.array([x,y,z])`, `mpl_toolkits.mplot3d`
-- **Reales Sonnensystem** — NASA Horizons API für exakte Startdaten
+| Phase | Topic | Key insight |
+|---|---|---|
+| 1 | Euler + 2-body | First ellipse, drift made visible by measuring end-to-start distance |
+| 2 | 3-body + chaos | 1,000 km offset → ~1 AU divergence after 10 years |
+| 3 | RK4 + energy measurement | 140 million× better energy conservation at same dt |
+| 4 | Animation + N-body | Real-time RK4 simulation with trails, mass-scaled markers |
+| 5 | Leapfrog + symplecticity | Bounded energy error independent of simulation length |
 
 ---
 
-## Verbindungen
+## Connections
 
-| Feld | Verbindung |
+| Field | Connection |
 |---|---|
-| Mechatronik / Regelung | Zustandsraum `[x, v]` identisch mit Systemzustand in der Regelungstechnik |
-| Signalverarbeitung | FFT auf Trajektoriendaten → Orbitalperioden extrahieren |
-| Machine Learning | Kalman-Filter für verrauschte Positionsdaten |
-| Philosophie | Determinismus vs. Chaos: das 3-Körper-Problem ist deterministisch aber unvorhersehbar |
+| Control / mechatronics | State space `[x, v]` is identical to system state in control theory |
+| Signal processing | FFT on trajectory data extracts orbital periods |
+| Sensor fusion | Kalman filter for noisy position estimates uses the same predict–update structure |
+| Structural acoustics | Energy conservation as a validation metric — same principle as in FEM convergence checks |

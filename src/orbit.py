@@ -1,17 +1,18 @@
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
 G     = 6.674e-11
-M_sun = 1.989e30
+M_SUN = 1.989e30
 AU    = 1.496e11
 
 bodies = [
-    {"name": "Sonne", "mass": M_sun,    "pos": np.array([0.0, 0.0]), "vel": np.array([0.0, 0.0])},
-    {"name": "Erde",  "mass": 5.972e24, "pos": np.array([AU,  0.0]), "vel": np.array([0.0, 29_780.0])},
+    {"name": "Sun",   "mass": M_SUN,    "pos": np.array([0.0, 0.0]), "vel": np.array([0.0, 0.0])},
+    {"name": "Earth", "mass": 5.972e24, "pos": np.array([AU,  0.0]), "vel": np.array([0.0, 29_780.0])},
 ]
 
-dt = 86400   # 1 Tag (war: 3600)
-steps = 365   # 1 Jahr = 365 Tage
+dt    = 86400   # 1 day
+steps = 365     # 1 year
 
 trajectories = [[] for _ in bodies]
 
@@ -35,28 +36,22 @@ for step in range(steps):
 
 trajectories = [np.array(t) for t in trajectories]
 
-print(f"Abstand Start→Ende: {np.linalg.norm(trajectories[1][-1] - trajectories[1][0]):.2e} m")
+print(f"Drift start→end: {np.linalg.norm(trajectories[1][-1] - trajectories[1][0]):.2e} m")
 
-# ── Plot ───────────────────────────────────────
-import datetime
-
-# Simuliertes Datum berechnen (Startdatum + vergangene Schritte)
+# ── Plot ──────────────────────────────────────────────────────────────────────
 start_date = datetime.date(2024, 1, 1)
 end_date   = start_date + datetime.timedelta(seconds=steps * dt)
-date_str   = f"{start_date}  →  {end_date}"
 
 fig, ax = plt.subplots(figsize=(8, 8), facecolor="black")
 ax.set_facecolor("black")
 ax.set_aspect("equal")
-
-# Titel + Datum
-fig.suptitle("Erdbahn · Euler-Integration",
+fig.suptitle("Earth orbit · Euler integration",
              color="white", fontsize=14, fontweight="bold", y=0.97)
-ax.set_title(f"dt = {dt}s  |  {steps} Schritte  |  {date_str}",
+ax.set_title(f"dt = {dt}s  |  {steps} steps  |  {start_date} → {end_date}",
              color="#aaaaaa", fontsize=9, pad=10)
 
 colors = ["yellow", "deepskyblue"]
-names  = ["Sonne", "Erde"]
+names  = ["Sun", "Earth"]
 
 for traj, color, name in zip(trajectories, colors, names):
     ax.plot(traj[:, 0], traj[:, 1], color=color, lw=0.8, alpha=0.7, label=name)
@@ -65,7 +60,7 @@ for traj, color, name in zip(trajectories, colors, names):
 
 ax.annotate("Start", xy=(trajectories[1][0, 0], trajectories[1][0, 1]),
             color="white", fontsize=9, xytext=(10, 10), textcoords="offset points")
-ax.annotate("Ende (Drift!)", xy=(trajectories[1][-1, 0], trajectories[1][-1, 1]),
+ax.annotate("End (drift!)", xy=(trajectories[1][-1, 0], trajectories[1][-1, 1]),
             color="orange", fontsize=9, xytext=(10, -18), textcoords="offset points")
 
 ax.legend(facecolor="black", labelcolor="white")
@@ -74,6 +69,6 @@ for spine in ax.spines.values():
     spine.set_edgecolor("gray")
 
 plt.tight_layout()
-plt.savefig("orbit_euler.png", dpi=150, bbox_inches="tight")
+plt.savefig("plots/orbit_euler.png", dpi=150, bbox_inches="tight")
 plt.show()
-print(f"Gespeichert: orbit_euler.png")
+print("Saved: plots/orbit_euler.png")
